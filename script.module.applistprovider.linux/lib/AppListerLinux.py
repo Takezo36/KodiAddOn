@@ -13,17 +13,19 @@ ADDON_VERSION = ADDON.getAddonInfo('version')
 EXEC = "exec"
 NAME = "name"
 ICON = "icon"
+SIDECALLS = "sidecalls"
 
  
 def discoverIcon(dirName, icon):
   allowedIconType = [".jpg", ".png"]
-  for theme in os.listdir(dirName):
-    if os.path.isdir(dirName+theme):
-      for iconfolder in sorted(os.listdir(dirName+theme), reverse=True):
-        if os.path.isfile(dirName+theme+os.sep+iconfolder+os.sep+"apps"+os.sep+icon+".png"):
-          return dirName+theme+os.sep+iconfolder+os.sep+"apps"+os.sep+icon+".png"
-        if os.path.isfile(dirName+theme+os.sep+iconfolder+os.sep+"actions"+os.sep+icon+".png"):
-          return dirName+theme+os.sep+iconfolder+os.sep+"actions"+os.sep+icon+".png"
+  if os.path.isdir(dirName):
+    for theme in os.listdir(dirName):
+      if os.path.isdir(dirName+theme):
+        for iconfolder in sorted(os.listdir(dirName+theme), reverse=True):
+          if os.path.isfile(dirName+theme+os.sep+iconfolder+os.sep+"apps"+os.sep+icon+".png"):
+            return dirName+theme+os.sep+iconfolder+os.sep+"apps"+os.sep+icon+".png"
+          if os.path.isfile(dirName+theme+os.sep+iconfolder+os.sep+"actions"+os.sep+icon+".png"):
+            return dirName+theme+os.sep+iconfolder+os.sep+"actions"+os.sep+icon+".png"
   return None
 #this is fucking slow find better way to look up the icons  
 #  if os.path.isfile(dirName) and dirName[-4:] in allowedIconType and icon in dirName:
@@ -57,17 +59,50 @@ def getAppsWithIcons(additionalDir=""):
       for file in sorted(os.listdir(appDir)):
         if file.endswith(".desktop"):
           entry = {}
+          desktopEntry = False
+          sideCalls = []
+          sideCall = {}
           for line in open(appDir+os.sep+file):
+            entry[SIDECALLS] = sideCalls
+            if line.startswith("[Desktop Entry"):
+              #main entry entrance
+              desktopEntry = True
+            if line.startswith("[Desktop Action"):
+              sideCall = {}
+              desktopEntry = False
+              sideCalls.append(sideCall)
             if line.startswith("Exec"):
-              entry[EXEC]=line.split("=")[1][:-1]
-            elif line.startswith("Name") and NAME not in entry:
-              entry[NAME]=line.split("=")[1][:-1]
+              if desktopEntry:
+                entry[EXEC]=line.split("=")[1][:-1]
+                if "%" in entry[EXEC]:
+                  entry[EXEC] = entry[EXEC][:entry[EXEC].find("%")]
+              else:
+                sideCall[EXEC]=line.split("=")[1][:-1]
+                if "%" in sideCall[EXEC]:
+                  sideCall[EXEC] = sideCall[EXEC][:sideCall[EXEC].find("%")]
+            elif line.startswith("Name"):
+              if desktopEntry:
+                if NAME not in entry:
+                  entry[NAME]=line.split("=")[1][:-1]
+              else:
+                if NAME not in sideCall:
+                  sideCall[NAME]=line.split("=")[1][:-1]
             elif line.startswith("Name["+language+"]"):
-              entry[NAME]=line.split("=")[1][:-1]
+              if desktopEntry:
+                entry[NAME]=line.split("=")[1][:-1]
+              else:
+                sideCall[NAME]=line.split("=")[1][:-1]
             elif line.startswith("Icon"):
-              entry[ICON]=line.split("=")[1][:-1]
+              if desktopEntry:
+                entry[ICON]=line.split("=")[1][:-1]
+              else:
+                sideCall[ICON]=line.split("=")[1][:-1]
           if ICON in entry:
             entry[ICON]=getBestIcon(entry[ICON])
+          if entry[SIDECALLS]:
+            for sideCall in entry[SIDECALLS]:
+              if ICON in sideCall:
+                sideCall[ICON]=getBestIcon(sideCall[ICON])
           result.append(entry)
   return result  
 

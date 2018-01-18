@@ -19,30 +19,72 @@ import AppListerLinux
 
 ADDON = xbmcaddon.Addon()
 ADDON_VERSION = ADDON.getAddonInfo('version')
+ACTION = "action"
+class AddCustomEntryDialog(xbmcgui.WindowDialog):
+  
+def createContextMenuEntries(sideCalls):
+  result = []
+  for sideCall in sideCalls:
+    result.append((sideCall[AppListerLinux.NAME], "Notification(" + sideCall[AppListerLinux.EXEC] + ", "  + sideCall[AppListerLinux.EXEC] + ")"))
+  result.append(("Add to start", "RunPlugin(plugin://plugin.program.applauncher?exec=addfav)"))
+  return result
 
+def createDirectories():
+  entries = AppListerLinux.getAppsWithIcons()
+  items = []
+  for entry in sorted(entries, key=lambda k: k[AppListerLinux.NAME]):
+    li = xbmcgui.ListItem(entry[AppListerLinux.NAME])
+    if "icon" in entry:
+      icon = entry[AppListerLinux.ICON]
+      if icon:
+        li.setArt({'icon' : icon,
+                   'thumb':icon,
+                   'poster':icon,
+                   'banner':icon,
+                   'fanart':icon,
+                   'clearart':icon,
+                   'clearlogo':icon,
+                   'landscape':icon})
+    contextMenuEntries = createContextMenuEntries(entry[AppListerLinux.SIDECALLS])
+    if contextMenuEntries:
+      li.addContextMenuItems(contextMenuEntries)
+    li.setPath(path="plugin://plugin.program.applauncher?exec="+entry[AppListerLinux.EXEC])
+
+    xbmcplugin.addDirectoryItem(handle, "plugin://plugin.program.applauncher/?exec="+entry[AppListerLinux.EXEC], li)
+  xbmcplugin.endOfDirectory(handle, cacheToDisc=False)  
+
+def addToStart(entry):
+  pass
+def addCustomEntry():
+  dialog = 
+def addCustomVariant():
+  pass
+def storeEntries(typeOfEntry, entries):
+
+def loadEntries(typeOfEntry):
+  
+
+def parseArgs():
+  handle = int(sys.argv[1])
+  params = {}
+  args = sys.argv[2][1:]
+  if args:
+    for argPair in args.split("&"):
+      temp = argPair.split("=")
+      param[temp[0]] = temp[1]
 if (__name__ == "__main__"):
-  if sys.argv[2][1:]:
-    print(xbmc.executebuiltin("System.Exec("+sys.argv[2][1:].split("=")[1]+")"))
+  parseArgs()
+  if ACTION in params:
+    action = params[ACTION]
+    if action == "exec":
+      executeApp(params[AppListerLinux.EXEC])
+    elif action == "addtostart":
+      
+    elif action == "addcustomentry":
+      
+    elif action == "addcustomvariant":
+       
   else:
-    entries = AppListerLinux.getAppsWithIcons()
-    handle = int(sys.argv[1])
-    items = []
-    for entry in sorted(entries, key=lambda k: k['name']):
-      li = xbmcgui.ListItem(entry["name"])
-      if "icon" in entry:
-        icon = entry["icon"]
-        if icon:
-          li.setArt({'icon' : icon,
-                     'thumb':icon,
-                     'poster':icon,
-                     'banner':icon,
-                     'fanart':icon,
-                     'clearart':icon,
-                     'clearlogo':icon,
-                     'landscape':icon})
-      li.setPath(path="plugin://plugin.program.applauncher?exec="+entry["exec"])
-
-      xbmcplugin.addDirectoryItem(handle, "plugin://plugin.program.applauncher/?exec="+entry["exec"], li)
-    xbmcplugin.endOfDirectory(int(sys.argv[1]), cacheToDisc=False)  
-xbmc.log('finished')
+    createDirectories()
+    xbmc.log('finished')
 
