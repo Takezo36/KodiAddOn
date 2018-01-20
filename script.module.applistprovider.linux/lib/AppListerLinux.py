@@ -14,12 +14,21 @@ EXEC = "exec"
 NAME = "name"
 ICON = "icon"
 SIDECALLS = "sidecalls"
-
+TYPE = "type"
+TYPE_APP = "app"
+TYPE_FOLDER = "folder"
  
 def discoverIcon(dirName, icon):
   allowedIconType = [".jpg", ".png"]
+  if os.path.isfile("/usr/share/pixmaps/"+icon+".png"):
+    return "/usr/share/pixmaps/"+icon+".png"
   if os.path.isdir(dirName):
-    for theme in os.listdir(dirName):
+    themeList = os.listdir(dirName)
+    #moving hicolor to front
+    if "hicolor" in themeList:
+      themeList.remove("hicolor")
+      themeList.insert(0, "hicolor")
+    for theme in themeList:
       if os.path.isdir(dirName+theme):
         for iconfolder in sorted(os.listdir(dirName+theme), reverse=True):
           if os.path.isfile(dirName+theme+os.sep+iconfolder+os.sep+"apps"+os.sep+icon+".png"):
@@ -47,7 +56,7 @@ def getBestIcon(icon):
   
 
 def getAppsWithIcons(additionalDir=""):
-  result = []
+  result = {}
   language = xbmc.getLanguage(xbmc.ISO_639_1)
   defaultDirs = ["/usr/share/applications/", "~/.local/share/applications/"]
   if additionalDir and additionalDir[-1:]!="/":
@@ -62,8 +71,10 @@ def getAppsWithIcons(additionalDir=""):
           desktopEntry = False
           sideCalls = []
           sideCall = {}
+          entry[SIDECALLS] = sideCalls
+          entry[TYPE] = TYPE_APP
           for line in open(appDir+os.sep+file):
-            entry[SIDECALLS] = sideCalls
+            
             if line.startswith("[Desktop Entry"):
               #main entry entrance
               desktopEntry = True
@@ -103,8 +114,8 @@ def getAppsWithIcons(additionalDir=""):
             for sideCall in entry[SIDECALLS]:
               if ICON in sideCall:
                 sideCall[ICON]=getBestIcon(sideCall[ICON])
-          result.append(entry)
-  return result  
+          result[entry[NAME]] = entry
+  return result
 
 if (__name__ == "__main__"):
   xbmc.log("version %s started" % ADDON_VERSION)
