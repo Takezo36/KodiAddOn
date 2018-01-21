@@ -11,13 +11,11 @@ def getStoreApps():
     if line.strip() == "" or line.startswith("Name") or line.startswith("----"):
       print "in continue"
       continue
-    for c in line:
-      print [c]
-    re.search('(\w+)', line)
-    temp = line.split('  ')
-    print temp
-    name = temp[0]
-    executable = temp[-1]
+    m = re.search('([^\s]+(\s[^\s]+)*)\s+([^\s]+\.[^\s]+_[^\s]+![^\s]+)', line)
+    if not m:
+      continue
+    name = m.group(1)
+    executable = m.group(3)
     print "exec" + executable
     winName = executable.split("_")[0]
     print "winName" + winName
@@ -30,9 +28,11 @@ def getStoreApps():
     for entry in output.split("\n"):
       print entry
       if entry.strip() != "":
-        temp = entry.split(": ")
-        key = temp[0].strip()
-        value = temp[1]
+        m = re.search('([^\s]+)\s+:\s([^\s]+)', entry)
+        if not m:
+          continue
+        key = m.group(1)
+        value = m.group(2)
         if key == "PackageFullName":
           packageName = value
         if key == "InstallLocation":
