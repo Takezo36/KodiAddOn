@@ -10,8 +10,10 @@ import xbmcgui
 import xbmcplugin
 import xbmcaddon
 import simplejson as json
-import AppListerLinux
+import AppLister
+import Constants
 import subprocess
+#import AddCustomDialog
 #import LibAutoCompletion
 #import YouTubeAutoCompletion
 #import LibSearch
@@ -33,36 +35,56 @@ DIR = "dir"
 STARTMENU_IGNORE = "dshjkfhsd"
 STARTMENU_ENTRY = "start"
 ALL_APPS_STRING = "All Apps"
-REMOVE_START = "removeStart"
+REMOVE_START = "remove from start"
 handle = -1
 PLUGIN_ACTION = "Container.Update(plugin://plugin.program.applauncher?"
 
-
-class AddCustomEntryDialog(xbmcgui.WindowDialog):
-  def __init__(self, *args, **kwargs):
-    self.entryPath = kwargs.get("entryPath")
-    self.addControl(xbmcgui.ControlLabel(100, 250, 125, 75, self.entryPath))
+CUSTOM_ENTRY_CONTEXT_STRING = "create custome entry"
   
+
+class AddCustomEntryDialog(xbmcgui.WindowXMLDialog):
+  ACTION_PREVIOUS_MENU = 10
+  ACTION_NAV_BACK = 92
+  def __init__(self, *args, **kwargs):
+    self.addControl(xbmcgui.ControlLabel(0, 0, 125, 75, "test"))
+
+  def onAction(self, action):
+    print "action"
+    print action.getId()
+    if action.getId() == self.ACTION_PREVIOUS_MENU or action.getId() == self.ACTION_NAV_BACK:
+      print('action received: previous')
+      self.close()
+  def onControl(self, control):
+    print "control"
+    print control.getId()
+  def onClick(self, clickId):
+    print "click"
+    print clickId
+
+
   
 def createContextMenuEntries(sideCalls, entryPath):
   result = []
   for sideCall in sideCalls:
-    result.append((sideCall[AppListerLinux.NAME], "Notification(" + sideCall[AppListerLinux.EXEC] + ", "  + sideCall[AppListerLinux.EXEC] + ")"))
+    result.append((sideCall[Constants.NAME], "Notification(" + sideCall[Constants.EXEC] + ", "  + sideCall[Constants.EXEC] + ")"))
   result.append(("Add to start", PLUGIN_ACTION+ACTION+"="+ACTION_ADD_TO_START+"&"+DIR+"="+entryPath+")"))
   return result
 
+def createCustomEntryContextMenuEntry():
+  return (CUSTOM_ENTRY_CONTEXT_STRING, PLUGIN_ACTION+ACTION+"="+ACTION_ADD_CUSTOM_ENTRY+")")
+
 def createEntries(folderToShow = ""):
-  entries = AppListerLinux.getAppsWithIcons()
+  entries = AppLister.getAppsWithIcons()
   items = []
   if folderToShow != "" and folderToShow != STARTMENU_IGNORE:
     for folder in folderToShow.split("/"):
       entries = entries[folder]
-  for key in entries.keys():#sorted(entries, key=lambda k: k[AppListerLinux.NAME]):
+  for key in entries.keys():#sorted(entries, key=lambda k: k[Constants.NAME]):
     entry = entries[key]
-    if entry[AppListerLinux.TYPE] == AppListerLinux.TYPE_APP:
+    if entry[Constants.TYPE] == Constants.TYPE_APP:
       li = createAppEntry(entry, folderToShow+"/"+key)
       xbmcplugin.addDirectoryItem(handle, li.getPath(), li)
-    elif entry[AppListerLinux.TYPE] == AppListerLinux.TYPE_FOLDER:
+    elif entry[Constants.TYPE] == Constants.TYPE_FOLDER:
       li = createFolder(key,"plugin://plugin.program.applauncher?"+ACTION+"="+ACTION_SHOW_DIR+"&"+DIR+"="+folderToShow+"/"+key, folderToShow+"/"+key)
       xbmcplugin.addDirectoryItem(handle, li.getPath(), li, isFolder=True)
   xbmcplugin.endOfDirectory(handle, cacheToDisc=False)  
@@ -80,9 +102,9 @@ def createFolder(name, target, addToStartPath, isStart = False):
   return li
 
 def createAppEntry(entry, addToStartPath, isStart = False):
-  li = xbmcgui.ListItem(entry[AppListerLinux.NAME])
+  li = xbmcgui.ListItem(entry[Constants.NAME])
   if "icon" in entry:
-    icon = entry[AppListerLinux.ICON]
+    icon = entry[Constants.ICON]
     if icon:
       li.setArt({'icon' : icon,
                  'thumb':icon,
@@ -93,12 +115,13 @@ def createAppEntry(entry, addToStartPath, isStart = False):
                  'clearlogo':icon,
                  'landscape':icon})
   if not isStart:
-    contextMenuEntries = createContextMenuEntries(entry[AppListerLinux.SIDECALLS], addToStartPath)
+    contextMenuEntries = createContextMenuEntries(entry[Constants.SIDECALLS], addToStartPath)
   else:
     contextMenuEntries =  createRemoveStartContextMenu(addToStartPath)
+  contextMenuEntries.append(createCustomEntryContextMenuEntry())
   if contextMenuEntries:
     li.addContextMenuItems(contextMenuEntries)
-  li.setPath(path="plugin://plugin.program.applauncher?"+ACTION+"="+ACTION_EXEC+"&"+ACTION_EXEC+"="+entry[AppListerLinux.EXEC])
+  li.setPath(path="plugin://plugin.program.applauncher?"+ACTION+"="+ACTION_EXEC+"&"+ACTION_EXEC+"="+entry[Constants.EXEC])
   return li
 def addToStart(entry):
   if os.path.isfile(ADDON_STORAGE_FILE):
@@ -148,11 +171,11 @@ def findEntries(entries, searchItems):
     result.append(entry)
   return result
   #for key in entries.keys():
-  #  if key == AppListerLinux.TYPE:
+  #  if key == Constants.TYPE:
   #    continue
   #  if key in searchItems:
   #    result.append(entries[key])
-  #  elif entries[key][AppListerLinux.TYPE] == AppListerLinux.TYPE_FOLDER:
+  #  elif entries[key][Constants.TYPE] == Constants.TYPE_FOLDER:
   #    result.expand(findEntries(entries[key], searchItems)
   #return result
 
@@ -162,10 +185,10 @@ def createRemoveStartContextMenu(path):
 def createStartMenu(startItems):
   li = createFolder(ALL_APPS_STRING,"plugin://plugin.program.applauncher?"+ACTION+"="+ACTION_SHOW_DIR+"&"+DIR+"="+STARTMENU_IGNORE, STARTMENU_IGNORE, True)
   xbmcplugin.addDirectoryItem(handle, li.getPath(), li, isFolder=True)
-  entries = AppListerLinux.getAppsWithIcons()
+  entries = AppLister.getAppsWithIcons()
   entries = findEntries(entries, startItems)
   for entry in entries:
-    if entry[AppListerLinux.TYPE] == AppListerLinux.TYPE_FOLDER:
+    if entry[Constants.TYPE] == Constants.TYPE_FOLDER:
       isFolder = True
       li = createFolder(entry, "target", entry[REMOVE_START], True)
     else:
@@ -195,9 +218,6 @@ def parseArgs():
 if (__name__ == "__main__"):
   params = parseArgs()
   print params
-#  if handle == -1:
-#    global handle
-#    handle = params["handle"]
   if not os.path.exists(ADDON_USER_DATA_FOLDER):
     os.makedirs(ADDON_USER_DATA_FOLDER)
   if ACTION in params:
@@ -208,7 +228,12 @@ if (__name__ == "__main__"):
       addToStart(params[DIR])      
       #AddCustomEntryDialog(entryPath = params[DIR]).doModal()
     elif action == ACTION_ADD_CUSTOM_ENTRY:
-      pass
+      print ADDON.getAddonInfo('path').decode('utf-8')
+      dialog = AddCustomEntryDialog('addcustom.xml', ADDON.getAddonInfo('path').decode('utf-8'))
+      dialog.doModal()
+      #import time
+      #time.sleep(5)
+      print "after"
     elif action == ACTION_ADD_CUSTOM_VARIANT:
       pass
     elif action == ACTION_SHOW_DIR:
