@@ -10,4 +10,5 @@ SIDECALLS = "sidecalls"
 TYPE = "type"
 TYPE_APP = "app"
 TYPE_FOLDER = "folder"
+ALL_APPS_FOLDER = "all apps"
 
