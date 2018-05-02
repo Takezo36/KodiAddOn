@@ -5,118 +5,36 @@
 
 import xbmc
 import xbmcaddon
-import os
-
+import xbmcgui
+import simplejson as json
+import subprocess
 
 ADDON = xbmcaddon.Addon()
 ADDON_VERSION = ADDON.getAddonInfo('version')
-EXEC = "exec"
-NAME = "name"
-ICON = "icon"
-SIDECALLS = "sidecalls"
-TYPE = "type"
-TYPE_APP = "app"
-TYPE_FOLDER = "folder"
+ADDON_ID       = ADDON.getAddonInfo('id')
+ADDON_USER_DATA_FOLDER = xbmc.translatePath("special://profile/addon_data/"+ADDON_ID)
+APPREADER_SCRIPT = xbmc.translatePath("special://home")+ os.sep + "addons" + os.sep + ADDON_ID + os.sep + "lib" + os.sep + "appreader.ps1"
+FAILED_LINE1 = "You need to have PowerShell installed at least version 3.0"
+FAILED_LINE2 = "Please download and install it. For more info go to"
+FAIL_URL = "https://docs.microsoft.com/de-de/powershell/scripting/setup/installing-windows-powershell?view=powershell-6" 
+FAILED_LINE3 = FAIL_URL + " (this should be in your clipboard now)"
  
-def discoverIcon(dirName, icon):
-  allowedIconType = [".jpg", ".png"]
-  if os.path.isfile("/usr/share/pixmaps/"+icon+".png"):
-    return "/usr/share/pixmaps/"+icon+".png"
-  if os.path.isdir(dirName):
-    themeList = os.listdir(dirName)
-    #moving hicolor to front
-    if "hicolor" in themeList:
-      themeList.remove("hicolor")
-      themeList.insert(0, "hicolor")
-    for theme in themeList:
-      if os.path.isdir(dirName+theme):
-        for iconfolder in sorted(os.listdir(dirName+theme), reverse=True):
-          if os.path.isfile(dirName+theme+os.sep+iconfolder+os.sep+"apps"+os.sep+icon+".png"):
-            return dirName+theme+os.sep+iconfolder+os.sep+"apps"+os.sep+icon+".png"
-          if os.path.isfile(dirName+theme+os.sep+iconfolder+os.sep+"actions"+os.sep+icon+".png"):
-            return dirName+theme+os.sep+iconfolder+os.sep+"actions"+os.sep+icon+".png"
-  return None
-#this is fucking slow find better way to look up the icons  
-#  if os.path.isfile(dirName) and dirName[-4:] in allowedIconType and icon in dirName:
-   # return dirName
-  #if os.path.isdir(dirName):
- #   for entry in sorted(os.listdir(dirName), reverse=True):
-#      if os.path.isdir(dirName+entry):
-     #   discovered = discoverIcon(dirName+entry+os.sep, icon)
-    #  else:
-   #     discovered = discoverIcon(dirName+entry, icon)
-  #    if discovered is not None:
- #       return discovered
-#  return None
-
-def getBestIcon(icon):
-  if os.path.isfile(icon):
-    return icon
-  return discoverIcon("/usr/share/icons/", icon)
-  
-
 def getAppsWithIcons(additionalDir=""):
-  result = {}
-  language = xbmc.getLanguage(xbmc.ISO_639_1)
-  defaultDirs = ["/usr/share/applications/", "~/.local/share/applications/"]
-  if additionalDir and additionalDir[-1:]!="/":
-    additionalDir += "/"
-  if additionalDir:
-    defaultDirs.append(additionalDir)
-  for appDir in defaultDirs:
-    if os.path.isdir(appDir):
-      for file in sorted(os.listdir(appDir)):
-        if file.endswith(".desktop"):
-          entry = {}
-          desktopEntry = False
-          sideCalls = []
-          sideCall = {}
-          entry[SIDECALLS] = sideCalls
-          entry[TYPE] = TYPE_APP
-          for line in open(appDir+os.sep+file):
-            
-            if line.startswith("[Desktop Entry"):
-              #main entry entrance
-              desktopEntry = True
-            if line.startswith("[Desktop Action"):
-              sideCall = {}
-              desktopEntry = False
-              sideCalls.append(sideCall)
-            if line.startswith("Exec"):
-              if desktopEntry:
-                entry[EXEC]=line.split("=")[1][:-1]
-                if "%" in entry[EXEC]:
-                  entry[EXEC] = entry[EXEC][:entry[EXEC].find("%")]
-              else:
-                sideCall[EXEC]=line.split("=")[1][:-1]
-                if "%" in sideCall[EXEC]:
-                  sideCall[EXEC] = sideCall[EXEC][:sideCall[EXEC].find("%")]
-            elif line.startswith("Name"):
-              if desktopEntry:
-                if NAME not in entry:
-                  entry[NAME]=line.split("=")[1][:-1]
-              else:
-                if NAME not in sideCall:
-                  sideCall[NAME]=line.split("=")[1][:-1]
-            elif line.startswith("Name["+language+"]"):
-              if desktopEntry:
-                entry[NAME]=line.split("=")[1][:-1]
-              else:
-                sideCall[NAME]=line.split("=")[1][:-1]
-            elif line.startswith("Icon"):
-              if desktopEntry:
-                entry[ICON]=line.split("=")[1][:-1]
-              else:
-                sideCall[ICON]=line.split("=")[1][:-1]
-          if ICON in entry:
-            entry[ICON]=getBestIcon(entry[ICON])
-          if entry[SIDECALLS]:
-            for sideCall in entry[SIDECALLS]:
-              if ICON in sideCall:
-                sideCall[ICON]=getBestIcon(sideCall[ICON])
-          result[entry[NAME]] = entry
+  output = subprocess.check_output("powershell $PSVersionTable.PSVersion.Major")
+  try: 
+    version = int(output)
+    if version < 3:
+      showFailedMsg()
+      return {}
+    except ValueError:
+      showFailedMsg()
+      return {}
+  output = subprocess.check_output(APPREADER_SCRIPT)
+  result = json.loads(output)
   return result
-
+def showFailedMsg():
+  subprocess.call("echo \\\"" + FAIL_URL + "\\\"|clip")
+  xbmcgui.Dialog().ok('Error', FAILED_LINE1,FAILED_LINE2,FAILED_LINE3)
 if (__name__ == "__main__"):
   xbmc.log("version %s started" % ADDON_VERSION)
   ADDON.openSettings()

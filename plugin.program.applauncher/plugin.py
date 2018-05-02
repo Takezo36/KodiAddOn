@@ -138,7 +138,8 @@ def createAppEntry(entry, addToStartPath, isStart, isRoot, isCustom = False):
                  'clearlogo':icon,
                  'landscape':icon})
   contextMenu = []
-  addSideCallEntries(contextMenu, entry[Constants.SIDECALLS])
+  if Constants.SIDECALLS in entry.keys():
+    addSideCallEntries(contextMenu, entry[Constants.SIDECALLS])
   addBaseContextMenu(contextMenu, addToStartPath, entry[Constants.NAME], isStart, isRoot, isCustom)
   if not isStart and not isCustom:
     contextMenu.append(createCustomVariantContextMenuEntry(addToStartPath))
@@ -168,7 +169,6 @@ def addCustomEntry(exe="/", icon="/", name=""):
   entry[Constants.EXEC] = fileName + " " + params
   entry[Constants.ICON] = icon
   entry[Constants.TYPE] = Constants.TYPE_APP
-  entry[Constants.SIDECALLS] = []
   data = loadData()
   data[CUSTOM_ENTRIES][name] = entry
   writeData(data)
@@ -180,12 +180,12 @@ def addCustomVariant(path):
   showCustomDialog(entry[Constants.EXEC], entry[Constants.ICON], entry[Constants.NAME])
 
 def executeApp(command):
-  killKodi = True
-  minimize = False
+  killKodi = ADDON.getSetting("killKodi")
+  minimize = ADDON.getSetting("minimize")
   if killKodi:
     kodiExe = xbmc.translatePath("special://xbmc") + "kodi"
     subprocess.Popen((sys.executable + " " + APP_LAUNCHER + " " + command + " " + kodiExe).split(" "))
-#    xbmc.executebuiltin("Quit")
+    xbmc.executebuiltin("Quit")
   else:
     if minimize:
       xbmc.executebuiltin("Minimize")

@@ -26,18 +26,17 @@ msgstr ""
 
 #Kodion Settings
 
-msgctxt "#30000"
-msgid "General"
+msgctxt "#32001"
+msgid "App Launcher Settings"
 msgstr ""
 
-msgctxt "#30001"
-msgid "Username"
+msgctxt "#32002"
+msgid "Minimize Kodi"
 msgstr ""
 
-msgctxt "#30002"
-msgid "Password"
+msgctxt "#32003"
+msgid "Kill Kodi and restart after app is closed"
 msgstr ""
-
 #empty strings from id 30003 to 30006
 
 msgctxt "#30007"
