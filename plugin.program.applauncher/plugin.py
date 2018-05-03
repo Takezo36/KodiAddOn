@@ -1,6 +1,6 @@
 # -*- coding: utf8 -*-
 
-# Copyright (C) 2015 - Philipp Temminghoff <phil65@kodi.tv>
+# Copyright (C) 2018 - Benjamin Hebgen <mail>
 # This program is Free Software see LICENSE file for details
 
 import os
@@ -13,6 +13,7 @@ import simplejson as json
 import AppLister
 import Constants
 import subprocess
+from distutils.util import strtobool
 #import AddCustomDialog
 #import LibAutoCompletion
 #import YouTubeAutoCompletion
@@ -24,7 +25,7 @@ ADDON = xbmcaddon.Addon()
 ADDON_VERSION = ADDON.getAddonInfo('version')
 ADDON_ID       = ADDON.getAddonInfo('id')
 ADDON_USER_DATA_FOLDER = xbmc.translatePath("special://profile/addon_data/"+ADDON_ID)
-APP_LAUNCHER = xbmc.translatePath("special://home")+ os.sep + "addons" + os.sep + ADDON_ID + os.sep + "resources" + os.sep + "lib" + os.sep + "AppLauncher.py"
+APP_LAUNCHER = xbmc.translatePath("special://home")+ "addons" + os.sep + ADDON_ID + os.sep + "resources" + os.sep + "lib" + os.sep + "AppLauncher.py"
 ADDON_STORAGE_FILE = ADDON_USER_DATA_FOLDER + os.sep + "store.json"
 ACTION = "action"
 ACTION_SHOW_DIR = "showdir"
@@ -180,8 +181,8 @@ def addCustomVariant(path):
   showCustomDialog(entry[Constants.EXEC], entry[Constants.ICON], entry[Constants.NAME])
 
 def executeApp(command):
-  killKodi = ADDON.getSetting("killKodi")
-  minimize = ADDON.getSetting("minimize")
+  killKodi = strtobool(ADDON.getSetting("killKodi"))
+  minimize = strtobool(ADDON.getSetting("minimize"))  
   if killKodi:
     kodiExe = xbmc.translatePath("special://xbmc") + "kodi"
     subprocess.Popen((sys.executable + " " + APP_LAUNCHER + " " + command + " " + kodiExe).split(" "))
@@ -189,6 +190,7 @@ def executeApp(command):
   else:
     if minimize:
       xbmc.executebuiltin("Minimize")
+    print command
     subprocess.call(command.strip().split(" "))
     
 

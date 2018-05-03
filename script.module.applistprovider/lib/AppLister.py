@@ -5,7 +5,7 @@
 
 import platform
 
-myOS = platform.system
+myOS = platform.system()
 print myOS
 if myOS == "Linux":
   import AppListerLinux as MyAppLister
