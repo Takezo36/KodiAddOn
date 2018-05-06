@@ -1,3 +1,8 @@
+# -*- coding: utf8 -*-
+
+# Copyright (C) 2018 - Benjamin Hebgen
+# This program is Free Software see LICENSE file for details
+
 $WshShell = New-Object -ComObject ("WScript.Shell")
 $NAME_CONST = "name"
 $EXEC_CONST = "exec"
@@ -71,14 +76,19 @@ Function getIconFromExe($exe){
 	#Write-Host "look here"
 	#Write-Host "REAL_EXE: " $realExe
 	#Write-Host "EXE: " $exe
-	$myIcon = [Drawing.Icon]::ExtractAssociatedIcon($realExe)
-	$path = $ICON_STORE_FOLDER + $realExe.GetHashCode() + ".bmp"
-	if(![IO.File]::Exists($path)){
-		#$stream = New-Object IO.FileStream $path ,'Create','Write','Read'
-		$myIcon.ToBitmap().Save($path)
-		#$stream.Close()
-	}	
-	return $path
+	try{
+		$myIcon = [Drawing.Icon]::ExtractAssociatedIcon($realExe)
+		$path = $ICON_STORE_FOLDER + $realExe.GetHashCode() + ".bmp"
+		if(![IO.File]::Exists($path)){
+			#$stream = New-Object IO.FileStream $path ,'Create','Write','Read'
+			$myIcon.ToBitmap().Save($path)
+			#$stream.Close()
+		}	
+		return $path
+	}
+	catch{
+		return ""
+	}
 }
 Function getStartMenuEntries(){
 	forEach($dir in $startDirs){
