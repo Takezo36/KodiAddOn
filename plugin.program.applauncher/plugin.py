@@ -31,22 +31,23 @@ ACTION = "action"
 ACTION_SHOW_DIR = "showdir"
 ACTION_ADD_CUSTOM_VARIANT = "addcustomvariant"
 ACTION_ADD_CUSTOM_ENTRY = "addcustomentry"
-ACTION_ADD_TO_START = "addtostart"
+ACTION_ADD_START_TO_CUSTOM = "addtostart"
 ACTION_REMOVE_FROM_START = "removetostart"
 ACTION_REMOVE_FROM_CUSTOMS = "removefromcustoms"
+ACTION_ADD_CUSTOM_FOLDER = "addcustomfolder"
 ACTION_EXEC = "exec"
 CUSTOM_ENTRIES = "custom"
 DIR = "dir"
-STARTMENU_IGNORE = "dshjkfhsd"
-STARTMENU_ENTRY = "start"
+IS_CUSTOM = "iscustom"
 handle = -1
 PLUGIN_ACTION = "Container.Update(plugin://plugin.program.applauncher?"
 
-CUSTOM_ENTRY_CONTEXT_STRING = "Create custom entry"
-CUSTOM_VARIANT = "Create custom variant"
-ADD_TO_START = "Add to start"
+CREATE_CUSTOM_ENTRY_STRING = "Create custom entry"
+CREATE_CUSTOM_FOLDER_STRING = "Create custom folder"
+CREATE_CUSTOM_VARIANT_STRING = "Create custom variant"
+ADD_START_ENTRY_TO_CUSTOMS_STRING = "Add to custom entries"
 ALL_APPS_STRING = "All Apps"
-REMOVE_START = "Remove from start"
+REMOVE_CUSTOM_ENTRY_STRING = "Remove from custom entries"
 
 
 
@@ -55,76 +56,93 @@ def addSideCallEntries(contextMenu, sideCalls):
     contextMenu.append((sideCall[Constants.NAME], PLUGIN_ACTION+ACTION+"="+ACTION_EXEC+"&"+ACTION_EXEC+"="+sideCall[Constants.EXEC]+")"))
   return contextMenu
 
-def addRemoveStartEntry(contextMenu, path):
-  contextMenu.append((REMOVE_START, PLUGIN_ACTION+ACTION+"="+ACTION_REMOVE_FROM_START+"&"+DIR+"="+path+")"))
+def addRemoveCustomEntry(contextMenu, path):
+  contextMenu.append((REMOVE_CUSTOM_ENTRY_STRING, PLUGIN_ACTION+ACTION+"="+ACTION_REMOVE_FROM_CUSTOMS+"&"+DIR+"="+path+")"))
   return contextMenu
-def addRemoveCustomEntry(contextMenu, name):
-  contextMenu.append((REMOVE_START, PLUGIN_ACTION+ACTION+"="+ACTION_REMOVE_FROM_CUSTOMS+"&"+DIR+"="+name+")"))
+def addAddStartToCustomEntries(contextMenu, path):
+  contextMenu.append((ADD_START_ENTRY_TO_CUSTOMS_STRING, PLUGIN_ACTION+ACTION+"="+ACTION_ADD_START_TO_CUSTOM+"&"+DIR+"="+path+")"))
   return contextMenu
-def addAddToStartEntry(contextMenu, entryPath):
-  contextMenu.append((ADD_TO_START, PLUGIN_ACTION+ACTION+"="+ACTION_ADD_TO_START+"&"+DIR+"="+entryPath+")"))
+def addCustomVariantEntry(contextMenu, path):
+  contextMenu.append((CREATE_CUSTOM_VARIANT_STRING, PLUGIN_ACTION+ACTION+"="+ACTION_ADD_CUSTOM_VARIANT+"&"+DIR+"="+path+")"))
   return contextMenu
-def createCustomVariantContextMenuEntry(entryPath):
-  return (CUSTOM_VARIANT, PLUGIN_ACTION+ACTION+"="+ACTION_ADD_CUSTOM_VARIANT+"&"+DIR+"="+entryPath+")")
 
 
-def createEntries(folderToShow = ""):
-  entries = AppLister.getAppsWithIcons()
-  items = []
-  if folderToShow != "":
-    isRoot = False
-    #sucks do proper url decoding
-    folderToShow = folderToShow.replace("%2f", "/")
-    folderToShow = folderToShow.replace("%2F", "/")
-    folderToShow = folderToShow.replace("%20", " ")
-    for folder in folderToShow.split("/"):
-      entries = entries[folder]
-  else:
+def createEntries(folderToShow = "", folderIsInCustoms = True):
+  customeEntries = None
+  startEntries = None
+  #sucks do proper url decoding
+  folderToShow = folderToShow.replace("%2f", "/")
+  folderToShow = folderToShow.replace("%2F", "/")
+  folderToShow = folderToShow.replace("%20", " ")
+  isRoot = False
+  if folderToShow == "":
     isRoot = True
-    startItems = loadData()
-    createStartMenu(startItems,entries)
-  if not strtobool(ADDON.getSetting("dontshowstart")):
-    addStartEntries(entries)
+  if folderIsInCustoms or isRoot:
+    addCustomEntries(folderToShow, isRoot)
+  if not folderIsInCustoms or folderToShow == "":
+    if not strtobool(ADDON.getSetting("dontshowstart")):
+      addStartEntries(folderToShow, isRoot)
   addAddCustomEntry(handle, folderToShow)
+  addAddCustomFolder(handle, folderToShow)
   xbmcplugin.endOfDirectory(handle, cacheToDisc=False)  
-def addStartEntries(entries):
+def getFolder(entries, folderToShow):
+  if folderToShow == "":
+    return entries
+  for folder in folderToShow.split("/"):
+      entries = entries[folder]
+  return entries
+
+def addEntries(entries, folderToShow, isCustom, isRoot):
   for key in entries.keys():#sorted(entries, key=lambda k: k[Constants.NAME]):
     if key == Constants.TYPE:
       continue
     entry = entries[key]
     if entry[Constants.TYPE] == Constants.TYPE_APP:
-      li = createAppEntry(entry, folderToShow+"/"+key, False, isRoot)
+      li = createAppEntry(entry, folderToShow+"/"+key, isCustom)
       xbmcplugin.addDirectoryItem(handle, li.getPath(), li)
     elif entry[Constants.TYPE] == Constants.TYPE_FOLDER:
       if not isRoot:
         folderLink = folderToShow + "/" + key
       else:
         folderLink = key
-      li = createFolder(key,"plugin://plugin.program.applauncher?"+ACTION+"="+ACTION_SHOW_DIR+"&"+DIR+"="+folderLink, folderLink, False, isRoot)
+      kodiAction = "plugin://plugin.program.applauncher?"+ACTION+"="+ACTION_SHOW_DIR+"&"+DIR+"="+folderLink+"&"+IS_CUSTOM+"="+str(int(isCustom))
+      li = createFolder(key, kodiAction, folderLink, isCustom)
       xbmcplugin.addDirectoryItem(handle, li.getPath(), li, isFolder=True)
   
+  
+def addStartEntries(folderToShow, isRoot):
+  entries = AppLister.getAppsWithIcons()
+  entries = getFolder(entries, folderToShow)
+  addEntries(entries, folderToShow, False, isRoot)
+
 def addAddCustomEntry(handle, path):
-  li = xbmcgui.ListItem(CUSTOM_ENTRY_CONTEXT_STRING)
+  li = xbmcgui.ListItem(CREATE_CUSTOM_ENTRY_STRING)
   li.setPath(path="plugin://plugin.program.applauncher?"+ACTION+"="+ACTION_ADD_CUSTOM_ENTRY+"&"+DIR+"="+path)
   xbmcplugin.addDirectoryItem(handle, li.getPath(), li)
-def createFolder(name, target, addToStartPath, isStart, isRoot):
+def addAddCustomFolder(handle, path):
+  li = xbmcgui.ListItem(CREATE_CUSTOM_FOLDER_STRING)
+  li.setPath(path="plugin://plugin.program.applauncher?"+ACTION+"="+ACTION_ADD_CUSTOM_FOLDER+"&"+DIR+"="+path)
+  xbmcplugin.addDirectoryItem(handle, li.getPath(), li)
+
+def createFolder(name, target, path, isCustom):
   #print target
   li = xbmcgui.ListItem(name)
   li.setPath(path=target)
   #li.setIsFolder(True)
   contextMenu = []
-  addBaseContextMenu(contextMenu, addToStartPath, None, isStart, isRoot)
-  if contextMenu:
-      li.addContextMenuItems(contextMenu)
+  addBaseContextMenu(contextMenu, path, isCustom)
+  li.addContextMenuItems(contextMenu)
   return li
 
-def addBaseContextMenu(contextMenu, addToStartPath, name, isCustom = False):
+def addBaseContextMenu(contextMenu, path, isCustom):
   if isCustom:
-    addRemoveCustomEntry(contextMenu, addToStartPath)
+    addRemoveCustomEntry(contextMenu, path)
+  else:
+    addCustomVariantEntry(contextMenu, path)
+    addAddStartToCustomEntries(contextMenu, path)
 
 def createAppEntry(entry, addToStartPath, isCustom = False):
   li = xbmcgui.ListItem(entry[Constants.NAME])
-  print entry[Constants.EXEC]
   if "icon" in entry:
     icon = entry[Constants.ICON]
     if icon:
@@ -139,20 +157,17 @@ def createAppEntry(entry, addToStartPath, isCustom = False):
   contextMenu = []
   if Constants.SIDECALLS in entry.keys():
     addSideCallEntries(contextMenu, entry[Constants.SIDECALLS])
-  addBaseContextMenu(contextMenu, addToStartPath, entry[Constants.NAME], isCustom)
-  if not isCustom:
-    contextMenu.append(createCustomVariantContextMenuEntry(addToStartPath))
-  if contextMenu:
-    li.addContextMenuItems(contextMenu)
+  addBaseContextMenu(contextMenu, addToStartPath, isCustom)
+  li.addContextMenuItems(contextMenu)
   li.setPath(path="plugin://plugin.program.applauncher?"+ACTION+"="+ACTION_EXEC+"&"+ACTION_EXEC+"="+entry[Constants.EXEC])
   return li
-def addToStart(path):
+def addStartEntryAsCustom(path):
   entry = AppLister.getAppsWithIcons()
   for key in path.split("/"):
     entry = entry[key]
   storeEntry(entry[Constants.EXEC], entry[Constants.ICON], entry[Constants.NAME])
 
-def addCustomEntry(exe="/", icon="/", name=""):
+def addCustomEntry(exe="/", icon="/", name="", path):
   dialog = xbmcgui.Dialog()
   fileName = dialog.browseSingle(1, 'Select Execution File', 'files', '', False, False, exe)
   if fileName == "":
@@ -180,8 +195,8 @@ def storeEntry(exe="/", icon="/", name="", path="/"):
       storepoint = storepoint[key]
     else:
       storepoint[key] = {}
-      storepoint[key].[Constants.TYPE] == Constants.TYPE_FOLDER
-      storepoint[key].[Constants.NAME] == key
+      storepoint[key][Constants.TYPE] = Constants.TYPE_FOLDER
+      storepoint[key][Constants.NAME] = key
       storepoint = storepoint[key]
   storepoint[name] = entry
   writeData(data)
@@ -190,11 +205,12 @@ def addCustomVariant(path):
   entry = AppLister.getAppsWithIcons()
   for key in path.split("/"):
     entry = entry[key]
-  addCustomEntry(entry[Constants.EXEC], entry[Constants.ICON], entry[Constants.NAME])
+  addCustomEntry(entry[Constants.EXEC], entry[Constants.ICON], entry[Constants.NAME], path)
 
 def executeApp(command):
   killKodi = strtobool(ADDON.getSetting("killkodi"))
-  minimize = strtobool(ADDON.getSetting("minimize"))  
+  minimize = strtobool(ADDON.getSetting("minimize"))
+  killAfterAppClose = strtobool(ADDON.getSetting("killafterappclose"))    
   if killKodi:
     kodiExe = xbmc.translatePath("special://xbmc") + "kodi"
     subprocess.Popen((sys.executable + " " + APP_LAUNCHER + " " + command + " " + kodiExe).split(" "))
@@ -202,33 +218,20 @@ def executeApp(command):
   else:
     if minimize:
       xbmc.executebuiltin("Minimize")
-    print command
     subprocess.call(command.strip().split(" "))
+    if killAfterAppClose:
+      xbmc.executebuiltin("Quit")
     
 
 def addSortingMethods():
   xbmcplugin.addSortMethod(handle, xbmcplugin.SORT_METHOD_LABEL)
 
-def createStartMenu(startItems, entries):
-  if CUSTOM_ENTRIES in startItems and startItems[CUSTOM_ENTRIES]:
-    for key in startItems[CUSTOM_ENTRIES].keys():
-      entry = startItems[CUSTOM_ENTRIES][key]
-      if entry[Constants.TYPE] == Constants.TYPE_FOLDER:
-        isFolder = True
-        li = createFolder(entry, "target", entry[REMOVE_START], True, False)
-      else:
-        isFolder = False
-        li = createAppEntry(entry, entry[REMOVE_START], True, False)
-      xbmcplugin.addDirectoryItem(handle, li.getPath(), li, isFolder=isFolder)
+def addCustomEntries(folderToShow, isRoot):
+  data = loadData()
+  if data[CUSTOM_ENTRIES]:
+    entries = getFolder(data[CUSTOM_ENTRIES], folderToShow)
+    addEntries(entries, folderToShow, True, isRoot)
   
-  
-def loadStartMenuItems():
-  if not os.path.isfile(ADDON_STORAGE_FILE):
-    return None
-  with open(ADDON_STORAGE_FILE, 'r') as fp:
-    data = json.load(fp)
-  return data
-
 def writeData(data):
   with open(ADDON_STORAGE_FILE, 'w') as fp:  
     json.dump(data, fp)
@@ -266,27 +269,22 @@ def parseArgs():
   return params
 if (__name__ == "__main__"):
   params = parseArgs()
-  print params
-  print xbmc.translatePath("special://xbmc")
   if not os.path.exists(ADDON_USER_DATA_FOLDER):
     os.makedirs(ADDON_USER_DATA_FOLDER)
   if ACTION in params:
     action = params[ACTION]
     if action == ACTION_EXEC:
       executeApp(params[ACTION_EXEC])
-    elif action == ACTION_ADD_TO_START:
-      addToStart(params[DIR])      
-      #AddCustomEntryDialog(entryPath = params[DIR]).doModal()
+    elif action == ACTION_ADD_START_TO_CUSTOM:
+      addStartEntryAsCustom(params[DIR])      
     elif action == ACTION_ADD_CUSTOM_ENTRY:
-      addCustomEntry()
+      addCustomEntry(path = params[DIR])
     elif action == ACTION_ADD_CUSTOM_VARIANT:
       addCustomVariant(params[DIR])
-    elif action == ACTION_REMOVE_FROM_START:
-      removeFromStart(params[DIR])
     elif action == ACTION_REMOVE_FROM_CUSTOMS:
       removeFromCustoms(params[DIR])
     elif action == ACTION_SHOW_DIR:
-      createEntries(params[DIR])
+      createEntries(params[DIR], strtobool(params[IS_CUSTOM]))
       addSortingMethods()
   else:
     createEntries()

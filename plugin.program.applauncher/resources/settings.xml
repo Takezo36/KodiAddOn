@@ -4,5 +4,6 @@
         <setting label="32002" type="bool" id="minimize" default="false"/>
         <setting label="32003" type="bool" id="killkodi" default="false"/>
         <setting label="32004" type="bool" id="dontshowstart" default="false"/>
+        <setting label="32005" type="bool" id="killafterappclose" default="false"/>
     </category>
 </settings>
